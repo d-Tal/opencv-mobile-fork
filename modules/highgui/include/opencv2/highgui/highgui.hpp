@@ -80,6 +80,8 @@ public:
     ~VideoCapture();
 
     bool open(int index);
+    bool open_without_starting(int index);
+    bool start_streaming();
 
     bool isOpened() const;
 

@@ -67,13 +67,69 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(int index)
 {
+	bool ret = VideoCapture::open_without_starting(index);
+	ret = ret and VideoCapture::start_streaming();
+	return ret;
+}
+
+bool VideoCapture::start_streaming()
+{
+   if (capture_v4l2_aw_isp::supported()) //WARNING the order of checks in this function is coupled to the order of checks in the function below
+   {
+            int ret = d->cap_v4l2_aw_isp.start_streaming();
+            if (ret == 0)
+            {
+                d->is_opened = true;
+		return true;
+            }
+            else
+            {
+                d->cap_v4l2_aw_isp.close();
+		return false;
+            }
+    }
+
+    if (capture_v4l2_rk_aiq::supported())
+    {
+            int ret = d->cap_v4l2_rk_aiq.start_streaming();
+            if (ret == 0)
+            {
+                d->is_opened = true;
+		return true;
+            }
+            else
+            {
+                d->cap_v4l2_rk_aiq.close();
+		return false;
+            }
+    }
+
+    if (capture_cvi::supported())
+    {
+            int ret = d->cap_cvi.start_streaming();
+            if (ret == 0)
+            {
+                d->is_opened = true;
+		return true;
+            }
+            else
+            {
+                d->cap_cvi.close();
+		return false;
+            }
+    }
+    return false;
+}
+
+bool VideoCapture::open_without_starting(int index) //WARNING the order of checks in this function is coupled to the order of checks in the function above
+{
     if (d->is_opened)
     {
         release();
     }
 
 #if defined __linux__
-    if (capture_v4l2_aw_isp::supported())
+    if (capture_v4l2_aw_isp::supported()) //TODO cache this so the functions aren't coupled
     {
         int ret = d->cap_v4l2_aw_isp.open(d->width, d->height, d->fps);
         if (ret == 0)
@@ -81,16 +137,6 @@ bool VideoCapture::open(int index)
             d->width = d->cap_v4l2_aw_isp.get_width();
             d->height = d->cap_v4l2_aw_isp.get_height();
             d->fps = d->cap_v4l2_aw_isp.get_fps();
-
-            ret = d->cap_v4l2_aw_isp.start_streaming();
-            if (ret == 0)
-            {
-                d->is_opened = true;
-            }
-            else
-            {
-                d->cap_v4l2_aw_isp.close();
-            }
         }
     }
 
@@ -102,16 +148,6 @@ bool VideoCapture::open(int index)
             d->width = d->cap_v4l2_rk_aiq.get_width();
             d->height = d->cap_v4l2_rk_aiq.get_height();
             d->fps = d->cap_v4l2_rk_aiq.get_fps();
-
-            ret = d->cap_v4l2_rk_aiq.start_streaming();
-            if (ret == 0)
-            {
-                d->is_opened = true;
-            }
-            else
-            {
-                d->cap_v4l2_rk_aiq.close();
-            }
         }
     }
 
@@ -123,16 +159,6 @@ bool VideoCapture::open(int index)
             d->width = d->cap_cvi.get_width();
             d->height = d->cap_cvi.get_height();
             d->fps = d->cap_cvi.get_fps();
-
-            ret = d->cap_cvi.start_streaming();
-            if (ret == 0)
-            {
-                d->is_opened = true;
-            }
-            else
-            {
-                d->cap_cvi.close();
-            }
         }
     }
 #endif
